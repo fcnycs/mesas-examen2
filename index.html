@@ -645,10 +645,10 @@
           <div class="cuerpo">
             <p class="grande" id="desde"></p>
             <dl class="reglas">
-              <div><dt>Examen regular</dt><dd>por <a href="https://guarani.unp.edu.ar/unpata/" target="_blank" rel="noopener">SIU Guaraní</a>, hasta 2 días hábiles antes.</dd></div>
-              <div><dt>Examen libre</dt><dd>por nota en la Facultad, con firma del docente, hasta 5 días hábiles antes.</dd></div>
+              <div><dt>Examen regular</dt><dd>por <a href="https://guarani.unp.edu.ar/unpata/" target="_blank" rel="noopener">SIU Guaraní</a>, hasta 2 días hábiles antes. El sistema funciona todo el día: el último día, hasta las 23:59.</dd></div>
+              <div><dt>Examen libre</dt><dd>por nota en la Facultad, con firma del docente, hasta 5 días hábiles antes. La nota se entrega en el horario de atención, de 8 a 17 h.</dd></div>
             </dl>
-            <p class="nota">En cada mesa figura hasta qué día te podés inscribir (hasta las 23:59).</p>
+            <p class="nota">En cada mesa figura hasta qué día te podés inscribir.</p>
           </div>
         </li>
         <li class="ficha cat-feriados">
@@ -732,6 +732,12 @@
   // "INSCRIPCIONES A PARTIR DEL", "CORRESPONDE AL LLAMADO DE", "DIAS NO HABILES".
   const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTk7GgBeJJ8rXoVVV5brG60MiEH9ptYKnCcKnoILhRrg6riZ4Jrff4gTO9K3CDT5g8cpNQ435zU_ryc/pub?gid=0&single=true&output=csv&range=A:H";
   const CADA_CUANTO = 2 * 60 * 1000;   // cada cuánto se vuelve a leer la planilla (2 minutos)
+  // Hasta qué hora del último día se puede inscribir: por SIU Guaraní, todo el día; por nota (libre), hasta que
+  // cierra la atención en la Facultad (de 8 a 17 h). siempre: si la hora se muestra en todas las fechas.
+  const CIERRE = {
+    regular: { minutos: 23 * 60 + 59, texto: "23:59", siempre: false },
+    libre: { minutos: 17 * 60, texto: "17 h", siempre: true }
+  };
   // =====================================================
 
   const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -806,16 +812,21 @@
     return n < 0 ? "pasada" : (n === 0 ? "hoy" : "futura");
   }
 
-  // Hasta cuándo inscribirse: "hoy hasta las 23:59", "hasta mañana", "hasta el viernes 16/10" o "ya cerró".
-  function limite(txt, hoy) {
+  const minutosAhora = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+
+  // Hasta cuándo inscribirse. Regular (SIU Guaraní): "hoy hasta las 23:59", "hasta mañana", "hasta el viernes 16/10".
+  // Libre (nota en la Facultad): "hoy hasta las 17 h", "hasta mañana a las 17 h", "hasta el viernes 16/10 a las 17 h".
+  // Pasada la hora del último día, o después de ese día: "ya cerró".
+  function limite(txt, hoy, cierre) {
     if (!txt) return null;
     const d = leerFecha(txt);
     if (!d) return { clase: "abierta", texto: txt };
     const n = diasEntre(hoy, d);
-    if (n < 0) return { clase: "cerrada", texto: "ya cerró" };
-    if (n === 0) return { clase: "hoy", texto: "hoy hasta las 23:59" };
-    if (n === 1) return { clase: "abierta", texto: "hasta mañana" };
-    return { clase: "abierta", texto: "hasta el " + DIAS[d.getDay()] + " " + ddmm(d) };
+    const hora = cierre.siempre ? " a las " + cierre.texto : "";
+    if (n < 0 || (n === 0 && minutosAhora() >= cierre.minutos)) return { clase: "cerrada", texto: "ya cerró" };
+    if (n === 0) return { clase: "hoy", texto: "hoy hasta las " + cierre.texto };
+    if (n === 1) return { clase: "abierta", texto: "hasta mañana" + hora };
+    return { clase: "abierta", texto: "hasta el " + DIAS[d.getDay()] + "\u00a0" + ddmm(d) + hora };
   }
 
   // ---------- La planilla ----------
@@ -1092,7 +1103,7 @@
     // Si cerraron las dos, una sola línea: "Inscripción cerrada".
     let insc = "";
     if (e === "futura") {
-      const lims = [["regular", limite(m.limR, hoy)], ["libre", limite(m.limL, hoy)]].filter(([, l]) => l);
+      const lims = [["regular", limite(m.limR, hoy, CIERRE.regular)], ["libre", limite(m.limL, hoy, CIERRE.libre)]].filter(([, l]) => l);
       if (lims.length && lims.every(([, l]) => l.clase === "cerrada")) insc = '<span class="lim cerrada">Inscripción cerrada</span>';
       else for (const [tipo, l] of lims) {
         insc += '<span class="lim ' + l.clase + '"><b><span class="en-tarjeta">Inscripción </span><span class="tipo">' + tipo + "</span>:</b> " +
@@ -1189,12 +1200,16 @@
   });
 
   // Cada 2 minutos se vuelve a leer la planilla. Si cambia el día, se actualizan "Hoy es…" y las mesas que ya pasaron.
+  // También a las 17 h, cuando cierra la atención: la inscripción libre de ese día pasa a "ya cerró".
+  const momento = () => hoyDia().getTime() + (minutosAhora() >= CIERRE.libre.minutos ? 1 : 0);
   let diaMostrado = hoyDia().getTime();
+  let momentoMostrado = momento();
   const revisarDia = () => {
     const d = hoyDia().getTime();
-    if (d === diaMostrado) return;
-    diaMostrado = d;
-    renderHoy();
+    const m = momento();
+    if (m === momentoMostrado) return;
+    momentoMostrado = m;
+    if (d !== diaMostrado) { diaMostrado = d; renderHoy(); }
     if (leidaUnaVez) renderTabla();
   };
   setInterval(cargar, CADA_CUANTO);
