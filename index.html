@@ -453,6 +453,8 @@
   .mesas td.inscripcion { font-size: .9375rem; line-height: 1.4; white-space: nowrap; }
   .lim { display: block; }
   .lim b { font-weight: 750; }
+  .lim .en-tarjeta { display: none; }          /* en la tabla lo dice el título de la columna */
+  .lim .tipo { text-transform: capitalize; }   /* "Regular", "Libre" */
   .lim.cerrada { color: var(--tinta-suave); }
   .lim.cerrada b { font-weight: 600; }
 
@@ -535,6 +537,8 @@
     .mesas td.fecha::after, .mesas td.hora.sigue::after { content: "·"; display: inline-block; margin-left: .55rem; color: var(--tinta-suave); }
     .mesas td:empty { display: none; }
     .mesas td.inscripcion { flex: 1 1 100%; margin-top: .15rem; white-space: normal; }
+    .lim .en-tarjeta { display: inline; }      /* "Inscripción regular: …" */
+    .lim .tipo { text-transform: none; }
     .vacio td { flex: 1 1 100%; }
   }
 
@@ -770,13 +774,13 @@
     return n < 0 ? "pasada" : (n === 0 ? "hoy" : "futura");
   }
 
-  // Hasta cuándo inscribirse: "hoy hasta las 23:59", "hasta mañana", "hasta el viernes 16/10" o "cerrada".
+  // Hasta cuándo inscribirse: "hoy hasta las 23:59", "hasta mañana", "hasta el viernes 16/10" o "ya cerró".
   function limite(txt, hoy) {
     if (!txt) return null;
     const d = leerFecha(txt);
     if (!d) return { clase: "abierta", texto: txt };
     const n = diasEntre(hoy, d);
-    if (n < 0) return { clase: "cerrada", texto: "cerrada" };
+    if (n < 0) return { clase: "cerrada", texto: "ya cerró" };
     if (n === 0) return { clase: "hoy", texto: "hoy hasta las 23:59" };
     if (n === 1) return { clase: "abierta", texto: "hasta mañana" };
     return { clase: "abierta", texto: "hasta el " + DIAS[d.getDay()] + " " + ddmm(d) };
@@ -1050,13 +1054,16 @@
     const aula = /anulad/i.test(m.aula) ? "" : m.aula;
 
     // Hasta cuándo inscribirse: solo en las que vienen (en las de hoy, las que pasaron y las anuladas ya no hace falta).
-    // Si cerraron las dos, una sola línea: "Cerrada".
+    // Siempre dice "inscripción", para que no se confunda con la mesa: en la tabla lo dice el título de la columna
+    // y en las tarjetas del celular, cada línea ("Inscripción regular: hasta el viernes 16/10").
+    // Si cerraron las dos, una sola línea: "Inscripción cerrada".
     let insc = "";
     if (e === "futura") {
-      const lims = [["Regular", limite(m.limR, hoy)], ["Libre", limite(m.limL, hoy)]].filter(([, l]) => l);
-      if (lims.length && lims.every(([, l]) => l.clase === "cerrada")) insc = '<span class="lim cerrada">Cerrada</span>';
-      else for (const [nombre, l] of lims) {
-        insc += '<span class="lim ' + l.clase + '"><b>' + nombre + '</b> <span class="res">' + esc(l.texto) + "</span></span>";
+      const lims = [["regular", limite(m.limR, hoy)], ["libre", limite(m.limL, hoy)]].filter(([, l]) => l);
+      if (lims.length && lims.every(([, l]) => l.clase === "cerrada")) insc = '<span class="lim cerrada">Inscripción cerrada</span>';
+      else for (const [tipo, l] of lims) {
+        insc += '<span class="lim ' + l.clase + '"><b><span class="en-tarjeta">Inscripción </span><span class="tipo">' + tipo + "</span>:</b> " +
+          '<span class="res">' + esc(l.texto) + "</span></span>";
       }
     }
     const conAula = hayAulas && aula;
@@ -1065,7 +1072,7 @@
       '<td class="fecha"><span class="sr">Fecha: </span>' + fecha + "</td>" +
       '<td class="hora' + (conAula ? " sigue" : "") + '">' + (hora ? '<span class="sr">Hora: </span>' + esc(hora) : "") + "</td>" +
       (hayAulas ? '<td class="aula">' + (aula ? '<span class="sr">Aula: </span>' + esc(aula) : "") + "</td>" : "") +
-      '<td class="inscripcion">' + (insc ? '<span class="sr">Inscripción: </span>' + insc : "") + "</td></tr>";
+      '<td class="inscripcion">' + insc + "</td></tr>";
   }
 
   // ---------- Orden ----------
