@@ -391,7 +391,21 @@
   }
   .casilla input { width: 1.3rem; height: 1.3rem; margin: 0; accent-color: var(--tinta); cursor: pointer; }
 
+  /* El aviso de las aulas, con el naranja de los exámenes. */
+  .aviso-aula {
+    margin: 1.5rem 0 0;
+    padding: .65rem .9rem .7rem;
+    border-left: .3rem solid var(--c-examenes);
+    border-radius: 0 .45rem .45rem 0;
+    background: #fff3e6;
+    font-size: .9375rem;
+    line-height: 1.45;
+  }
+  .aviso-aula strong { font-weight: 750; }
+  .aviso-aula[hidden] { display: none; }
+
   .cuantas { margin: 1.4rem 0 0; font-size: .9375rem; color: var(--tinta-suave); }
+  .aviso-aula + .cuantas { margin-top: 1rem; }
   .cuantas:empty { display: none; }
 
   /* ---------- La tabla ---------- */
@@ -664,6 +678,9 @@
         <button type="button" class="boton" id="limpiar" hidden><span class="cuenta" id="cuentaFiltros">0</span>Limpiar filtros</button>
       </div>
 
+      <!-- Se ve mientras haya alguna mesa por venir sin aula: casi todas se confirman el mismo día del examen. -->
+      <p class="aviso-aula" id="avisoAula" hidden><strong>¿No figura el aula?</strong> La mayoría se confirma el mismo día del examen.
+        Si el aula de tu mesa no está listada, revisá sobre la hora de inicio: la página se actualiza sola.</p>
       <p class="cuantas" id="cuantas" role="status"></p>
 
       <div id="contenido">
@@ -1005,6 +1022,7 @@
     const n = cuantosFiltros();
     $("cuentaFiltros").textContent = n;
     $("limpiar").hidden = n === 0;
+    $("avisoAula").hidden = !mesas.some((m) => !m.aula && !m.anulada && estadoMesa(m, hoy) !== "pasada");
     const total = mesas.length;
     $("cuantas").textContent = visibles.length === total
       ? (total === 1 ? "Se muestra la única mesa." : "Se muestran las " + total + " mesas.")
