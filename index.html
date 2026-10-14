@@ -460,6 +460,13 @@
     vertical-align: top;
   }
   .mesas tbody tr.par td { background: var(--cebra); }
+  /* Al pasar el mouse por una mesa, la fila se oscurece un poco, para seguirla con la vista (como en SIU Guaraní). */
+  @media (hover: hover) {
+    .mesas tbody td { transition: background-color .12s; }
+    .mesas tbody tr.mesa:hover td { background: #dde3f5; }
+    .mesas tbody tr.mesa.pasada:hover td { background: #eceef4; }
+    .mesas tbody tr.mesa.anulada:hover td { background: #ffcfdb; }
+  }
   .mesas td.materia { font-weight: 650; overflow-wrap: anywhere; }
   .mesas td.fecha, .mesas td.hora { white-space: nowrap; }
   .mesas td.aula { overflow-wrap: anywhere; }
@@ -554,6 +561,14 @@
     .lim .en-tarjeta { display: inline; }      /* "Inscripción regular: …" */
     .lim .tipo { text-transform: none; }
     .vacio td { flex: 1 1 100%; }
+  }
+  /* En las tarjetas, con mouse (una ventana angosta en la computadora), se oscurece la tarjeta entera. */
+  @media (max-width: 44rem) and (hover: hover) {
+    .mesas tbody tr { transition: background-color .12s; }
+    .mesas tbody tr.mesa:hover td, .mesas tbody tr.mesa.pasada:hover td, .mesas tbody tr.mesa.anulada:hover td { background: none; }
+    .mesas tbody tr.mesa:hover { background: #dde3f5; }
+    .mesas tbody tr.mesa.pasada:hover { background: #eceef4; }
+    .mesas tbody tr.mesa.anulada:hover { background: #ffcfdb; }
   }
 
   /* ---------- Pie ---------- */
