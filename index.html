@@ -1097,12 +1097,14 @@
     const hora = /anulad/i.test(m.hora) ? "" : m.hora;
     const aula = /anulad/i.test(m.aula) ? "" : m.aula;
 
-    // Hasta cuándo inscribirse: solo en las que vienen (en las de hoy, las que pasaron y las anuladas ya no hace falta).
-    // Siempre dice "inscripción", para que no se confunda con la mesa: en la tabla lo dice el título de la columna
-    // y en las tarjetas del celular, cada línea ("Inscripción regular: hasta el viernes 16/10").
-    // Si cerraron las dos, una sola línea: "Inscripción cerrada".
+    // Hasta cuándo inscribirse, en las que vienen. Siempre dice "inscripción", para que no se confunda con la mesa:
+    // en la tabla lo dice el título de la columna y en las tarjetas del celular, cada línea
+    // ("Inscripción regular: hasta el viernes 16/10"). Si cerraron las dos, una sola línea: "Inscripción cerrada".
+    // En las de hoy también "Inscripción cerrada": el día del examen ya no hay inscripción. En las que pasaron
+    // (tachadas) y en las anuladas no va nada.
     let insc = "";
-    if (e === "futura") {
+    if (e === "hoy") insc = '<span class="lim cerrada">Inscripción cerrada</span>';
+    else if (e === "futura") {
       const lims = [["regular", limite(m.limR, hoy, CIERRE.regular)], ["libre", limite(m.limL, hoy, CIERRE.libre)]].filter(([, l]) => l);
       if (lims.length && lims.every(([, l]) => l.clase === "cerrada")) insc = '<span class="lim cerrada">Inscripción cerrada</span>';
       else for (const [tipo, l] of lims) {
